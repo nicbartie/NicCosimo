@@ -1,0 +1,131 @@
+OBJECT Table 61955 Product Structure
+{
+  OBJECT-PROPERTIES
+  {
+    Date=17/07/26;
+    Time=[ 4:35:43 PM];
+    Modified=Yes;
+    Version List=KAP-01;
+  }
+  PROPERTIES
+  {
+    DataPerCompany=No;
+    OnInsert=BEGIN
+               Indentation := Type;
+               UpdateHierarchyLevel(Rec,TRUE);
+             END;
+
+    OnModify=BEGIN
+               Indentation := Type;
+               TESTFIELD(Type,xRec.Type);
+               UpdateHierarchyLevel(Rec,FALSE);
+             END;
+
+    OnDelete=VAR
+               Item@1000000000 : Record 27;
+               ItemVariant@1000000002 : Record 5401;
+               ProdStructChildren@1000000001 : Record 61955;
+             BEGIN
+             END;
+
+    LookupPageID=Page62142;
+    DrillDownPageID=Page62142;
+  }
+  FIELDS
+  {
+    { 1   ;   ;ID                  ;Integer       ;AutoIncrement=Yes;
+                                                   Editable=No }
+    { 2   ;   ;Code                ;Code50        ;NotBlank=Yes }
+    { 5   ;   ;Type                ;Option        ;OptionString=Qualification,Level,Subject,Study Method,Course Type,Study Option }
+    { 6   ;   ;Indentation         ;Integer       ;Editable=No }
+    { 15  ;   ;Parent ID           ;Integer       ;TableRelation="Product Structure".ID;
+                                                   OnValidate=VAR
+                                                                ParentProductStructure@78777 : Record 61955;
+                                                              BEGIN
+                                                                IF "Parent ID" = ID THEN
+                                                                  ERROR('You cannot set the Parent ID the same as ID');
+                                                                IF ParentProductStructure.GET("Parent ID") THEN
+                                                                  IF ParentProductStructure.Type >= Type THEN
+                                                                    ERROR('The Parent ID Type cannot be the same or lower in the structure');
+                                                              END;
+                                                               }
+    { 35  ;   ;Sequence            ;Integer       ;OnValidate=VAR
+                                                                ProductStructure@78777 : Record 61955;
+                                                              BEGIN
+                                                                //Ensure the Sequence No. is not alread used
+                                                                ProductStructure.SETRANGE(Type,Type);
+                                                                ProductStructure.SETRANGE("Parent ID","Parent ID");
+                                                                ProductStructure.SETRANGE(Sequence,Sequence);
+                                                                ProductStructure.SETFILTER(ID,'<>%1',ID);
+                                                                IF ProductStructure.FINDFIRST THEN
+                                                                  ERROR('You cannot use Sequence %1 as Product Structure ID %2 is already using the same sequence number',Sequence,ProductStructure.ID);
+                                                              END;
+                                                               }
+    { 50  ;   ;Description         ;Text100        }
+    { 51  ;   ;Hierarchy Level     ;Code100        }
+  }
+  KEYS
+  {
+    {    ;ID                                       }
+    {    ;Code                                    ;Clustered=Yes }
+    {    ;Parent ID,Sequence                       }
+    {    ;Hierarchy Level                          }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      NewError1@1000000000 : TextConst 'ENG="There are no new %1''s to add or they have all been added to this already.\\Filters = %2"';
+      NewConfirm@1000000001 : TextConst 'ENG=Do you want to add a new Child for Structure Code "%1" Type "%2"?';
+      CannotDeleteError@1000000002 : TextConst 'ENG=You Cannot delete %1.  It is used by %2 records in the %3 Table';
+
+    LOCAL PROCEDURE UpdateHierarchyLevel@78777(VAR ProductStructure@78779 : Record 61955;Inserted@78781 : Boolean);
+    VAR
+      ParentProductStructure@78777 : Record 61955;
+      HierarchyCode@78778 : Code[10];
+      ChildrenProductStructure@78780 : Record 61955;
+    BEGIN
+
+      //Update Current Record
+      HierarchyCode := FORMAT(ProductStructure.Sequence);
+      IF ProductStructure.Sequence < 10 THEN
+        HierarchyCode := '00' + FORMAT(ProductStructure.Sequence)
+      ELSE
+        IF ProductStructure.Sequence < 100 THEN
+          HierarchyCode := '0' + FORMAT(ProductStructure.Sequence);
+      IF ProductStructure.Sequence > 999 THEN
+        ERROR('A Sequence over 1000 is not allowed');
+
+      IF ParentProductStructure.GET(ProductStructure."Parent ID") THEN BEGIN
+        IF ProductStructure."Parent ID" <> ProductStructure.ID THEN
+          ProductStructure."Hierarchy Level" := ParentProductStructure."Hierarchy Level" + HierarchyCode + '/'
+        ELSE
+          ProductStructure."Hierarchy Level" := '/' + HierarchyCode + '/';
+      END ELSE BEGIN
+        ProductStructure."Hierarchy Level" := '/' + HierarchyCode + '/';
+      END;
+
+      IF Inserted THEN
+        EXIT;
+      ProductStructure.MODIFY;
+
+      //Update Children
+      ChildrenProductStructure.SETRANGE("Parent ID",ProductStructure.ID);
+      IF ChildrenProductStructure.FINDSET(TRUE) THEN
+        REPEAT
+          UpdateHierarchyLevel(ChildrenProductStructure,FALSE);
+        UNTIL ChildrenProductStructure.NEXT = 0;
+    END;
+
+    BEGIN
+    {
+      KAP-01 Product Structure for NAV Migration
+        (a) WG 2017.07.26 : Created table
+        (b) NB 2017.07.26 : Set fields , Modify Triggers etc...
+    }
+    END.
+  }
+}
+
