@@ -5,7 +5,7 @@ OBJECT Table 61955 Product Structure
     Date=17/07/26;
     Time=[ 4:35:43 PM];
     Modified=Yes;
-    Version List=KAP-01;
+    Version List=KAP-01,#1;
   }
   PROPERTIES
   {
@@ -61,7 +61,7 @@ OBJECT Table 61955 Product Structure
                                                                   ERROR('You cannot use Sequence %1 as Product Structure ID %2 is already using the same sequence number',Sequence,ProductStructure.ID);
                                                               END;
                                                                }
-    { 50  ;   ;Description         ;Text100        }
+    { 50  ;   ;Description         ;Text150 ;Description=#1        }
     { 51  ;   ;Hierarchy Level     ;Code100        }
   }
   KEYS
@@ -77,7 +77,7 @@ OBJECT Table 61955 Product Structure
   CODE
   {
     VAR
-      NewError1@1000000000 : TextConst 'ENG="There are no new %1''s to add or they have all been added to this already.\\Filters = %2"';
+      NewError1@1000000000 : TextConst 'ENG="There are no new %1''s to add NIC WAS HEREor they have all been added to this already.\\Filters = %2"';
       NewConfirm@1000000001 : TextConst 'ENG=Do you want to add a new Child for Structure Code "%1" Type "%2"?';
       CannotDeleteError@1000000002 : TextConst 'ENG=You Cannot delete %1.  It is used by %2 records in the %3 Table';
 
@@ -124,6 +124,7 @@ OBJECT Table 61955 Product Structure
       KAP-01 Product Structure for NAV Migration
         (a) WG 2017.07.26 : Created table
         (b) NB 2017.07.26 : Set fields , Modify Triggers etc...
+	#1 NB 2017.8888
     }
     END.
   }
